@@ -1,19 +1,19 @@
 package service
 
 import (
-	"errors"
 	"fmt"
-	"log"
 
+	"github.com/fajarabdillahfn/banking-lib/errs"
+	"github.com/fajarabdillahfn/banking-lib/logger"
 	"github.com/fajarabdillahfn/banking_auth/domain"
 	"github.com/fajarabdillahfn/banking_auth/dto"
 	"github.com/golang-jwt/jwt"
 )
 
 type AuthService interface {
-	Login(dto.LoginRequest) (*dto.LoginResponse, error)
-	Verify(urlParams map[string]string) error
-	Refresh(request dto.RefreshTokenRequest) (*dto.LoginResponse, error)
+	Login(dto.LoginRequest) (*dto.LoginResponse, *errs.AppError)
+	Verify(urlParams map[string]string) *errs.AppError
+	Refresh(request dto.RefreshTokenRequest) (*dto.LoginResponse, *errs.AppError)
 }
 
 func NewLoginService(repo domain.AuthRepository, permissions domain.RolePermissions) DefaultAuthService {
@@ -25,32 +25,34 @@ type DefaultAuthService struct {
 	rolePermissions domain.RolePermissions
 }
 
-func (s DefaultAuthService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
+func (s DefaultAuthService) Login(req dto.LoginRequest) (*dto.LoginResponse, *errs.AppError) {
+	var appErr *errs.AppError
 	var login *domain.Login
 
-	login, err := s.repo.FindBy(req.Username, req.Password)
-	if err != nil {
-		return nil, err
+	login, appErr = s.repo.FindBy(req.Username, req.Password)
+	if appErr != nil {
+		return nil, appErr
 	}
 
 	claims := login.ClaimsForAccessToken()
 	authToken := domain.NewAuthToken(claims)
-	if err != nil {
-		return nil, err
+
+	var accessToken, refreshToken string
+	if accessToken, appErr = authToken.NewAccessToken(); appErr != nil {
+		return nil, appErr
 	}
 
-	var accessToken string
-	if accessToken, err = authToken.NewAccessToken(); err != nil {
-		return nil, err
+	if refreshToken, appErr = s.repo.GenerateAndSaveRefreshTokenToStore(authToken); appErr != nil {
+		return nil, appErr
 	}
 
-	return &dto.LoginResponse{AccessToken: accessToken}, nil
+	return &dto.LoginResponse{AccessToken: accessToken, RefreshToken: refreshToken}, nil
 }
 
-func (s DefaultAuthService) Verify(urlParams map[string]string) error {
+func (s DefaultAuthService) Verify(urlParams map[string]string) *errs.AppError {
 	// convert the string token to JWT struct
 	if jwtToken, err := jwtTokenFromString(urlParams["token"]); err != nil {
-		return err
+		return errs.NewAuthorizationError(err.Error())
 	} else {
 		/*
 			Checking the validity of the token, this verifies the expiry
@@ -62,40 +64,40 @@ func (s DefaultAuthService) Verify(urlParams map[string]string) error {
 			//converting the token claims to Claims struct
 			if claims.IsUserRole() {
 				if !claims.IsRequestVerifiedWithTokenClaims(urlParams) {
-					return errors.New("request not verified")
+					return errs.NewAuthorizationError("request not verified")
 				}
 			}
 			isAuthorized := s.rolePermissions.IsAuthorizedFor(claims.Role, urlParams["routeName"])
 			if !isAuthorized {
-				return fmt.Errorf("%s role is not authorized", claims.Role)
+				return errs.NewAuthorizationError(fmt.Sprintf("%s role is not authorized", claims.Role))
 			}
 
 			return nil
 
 		} else {
-			return errors.New("invalid token")
+			return errs.NewAuthorizationError("invalid token")
 		}
 	}
 }
 
-func (s DefaultAuthService) Refresh(request dto.RefreshTokenRequest) (*dto.LoginResponse, error) {
+func (s DefaultAuthService) Refresh(request dto.RefreshTokenRequest) (*dto.LoginResponse, *errs.AppError) {
 	if vErr := request.IsAccessTokenValid(); vErr != nil {
 		if vErr.Errors == jwt.ValidationErrorExpired {
-			var err error
+			var appErr *errs.AppError
 			// continue with the refresh token functionality
 			if err := s.repo.RefreshTokenExists(request.RefreshToken); err != nil {
 				return nil, err
 			}
 			//generate an access token from refresh token
 			var accessToken string
-			if accessToken, err = domain.NewAccessTokenFromRefreshToken(request.RefreshToken); err != nil {
-				return nil, err
+			if accessToken, appErr = domain.NewAccessTokenFromRefreshToken(request.RefreshToken); appErr != nil {
+				return nil, appErr
 			}
 			return &dto.LoginResponse{AccessToken: accessToken}, nil
 		}
-		return nil, errors.New("invalid token")
+		return nil, errs.NewAuthenticationError("invalid token")
 	}
-	return nil, errors.New("cannot generate a new access token until the current one expires")
+	return nil, errs.NewAuthenticationError("cannot generate a new access token until the current one expires")
 }
 
 func jwtTokenFromString(tokenString string) (*jwt.Token, error) {
@@ -103,7 +105,7 @@ func jwtTokenFromString(tokenString string) (*jwt.Token, error) {
 		return []byte(domain.HMAC_SAMPLE_SECRET), nil
 	})
 	if err != nil {
-		log.Println("Error while parsing token: " + err.Error())
+		logger.Error("Error while parsing token: " + err.Error())
 		return nil, err
 	}
 	return token, nil

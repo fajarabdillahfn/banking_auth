@@ -1,10 +1,12 @@
 package app
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/fajarabdillahfn/banking-lib/logger"
 	"github.com/fajarabdillahfn/banking_auth/domain"
 	"github.com/fajarabdillahfn/banking_auth/service"
 	"github.com/gorilla/mux"
@@ -12,13 +14,6 @@ import (
 
 	_ "github.com/lib/pq"
 )
-
-// func sanityCheck() {
-// 	if os.Getenv("SERVER_ADDRESS") == "" ||
-// 		os.Getenv("SERVER_PORT") == "" {
-// 		log.Fatal("Environment variable not defined....")
-// 	}
-// }
 
 func Start() {
 	// sanityCheck()
@@ -30,7 +25,10 @@ func Start() {
 	router.HandleFunc("/auth/refresh", ah.Refresh).Methods(http.MethodPost)
 	router.HandleFunc("/auth/verify", ah.Verify).Methods(http.MethodGet)
 
-	log.Fatal(http.ListenAndServe(":8080", router))
+	address := "localhost"
+	port := ":8181"
+	logger.Info(fmt.Sprintf("Starting OAuth server on %s:%s ...", address, port))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%s", address, port), router))
 }
 
 func getDbClient() *sqlx.DB {

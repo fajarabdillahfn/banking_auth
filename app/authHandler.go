@@ -19,9 +19,9 @@ func (h AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		log.Println("Error while decoding login request: " + err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 	} else {
-		token, err := h.service.Login(loginRequest)
+		token, appErr := h.service.Login(loginRequest)
 		if err != nil {
-			writeResponse(w, http.StatusUnauthorized, err.Error())
+			writeResponse(w, appErr.Code, appErr.AsMessage())
 		} else {
 			writeResponse(w, http.StatusOK, *token)
 		}
@@ -37,9 +37,9 @@ func (h AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if urlParams["token"] != "" {
-		err := h.service.Verify(urlParams)
-		if err != nil {
-			writeResponse(w, http.StatusOK, notAuthorizedResponse(err.Error()))
+		appErr := h.service.Verify(urlParams)
+		if appErr != nil {
+			writeResponse(w, http.StatusOK, notAuthorizedResponse(appErr.Message))
 		} else {
 			writeResponse(w, http.StatusOK, authorizedResponse())
 		}
@@ -54,9 +54,9 @@ func (h AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		log.Println("Error while decoding refresh token request: " + err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 	} else {
-		token, err := h.service.Refresh(refreshRequest)
+		token, appErr := h.service.Refresh(refreshRequest)
 		if err != nil {
-			writeResponse(w, http.StatusBadRequest, err.Error())
+			writeResponse(w, appErr.Code, appErr.AsMessage())
 		} else {
 			writeResponse(w, http.StatusOK, *token)
 		}
