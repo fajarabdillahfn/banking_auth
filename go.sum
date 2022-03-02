@@ -5,6 +5,8 @@ github.com/fajarabdillahfn/banking-lib v1.0.0 h1:AsNPUsS6uRno7B4Cb7MrZjCL8yPFnWK
 github.com/fajarabdillahfn/banking-lib v1.0.0/go.mod h1:AxB3krNYxUp5tvbDk2cV+3yfkp7ADurrbYuCfcsSsrw=
 github.com/fajarabdillahfn/banking-lib v1.0.1 h1:7DqiEGqkhYJkC/IhJnsGIwd2ZuDuq514X91TUohhlhg=
 github.com/fajarabdillahfn/banking-lib v1.0.1/go.mod h1:AxB3krNYxUp5tvbDk2cV+3yfkp7ADurrbYuCfcsSsrw=
+github.com/fajarabdillahfn/banking-lib v1.0.2 h1:8BVjJ+TGjqSG/GDBlyM5S4OpSZjeZPdbJfhoFNlFV3s=
+github.com/fajarabdillahfn/banking-lib v1.0.2/go.mod h1:AxB3krNYxUp5tvbDk2cV+3yfkp7ADurrbYuCfcsSsrw=
 github.com/go-sql-driver/mysql v1.5.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
 github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=
 github.com/golang-jwt/jwt v3.2.2+incompatible/go.mod h1:8pz2t5EyA70fFQQSrl6XZXzqecmYZeUEB8OUGHkxJ+I=
