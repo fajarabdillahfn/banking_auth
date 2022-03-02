@@ -26,10 +26,48 @@ func (h AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	} else {
 		token, err := h.service.Login(loginRequest)
 		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			fmt.Fprintf(w, err.Error())
+			writeResponse(w, http.StatusUnauthorized, err.Error())
 		} else {
-			fmt.Fprintf(w, *token)
+			writeResponse(w, http.StatusOK, *token)
 		}
 	}
+}
+
+func (h AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
+	urlParams := make(map[string]string)
+
+	// converting from query to map
+	for k, _ := range r.URL.Query() {
+		urlParams[k] = r.URL.Query().Get(k)
+	}
+
+	if urlParams["token"] != "" {
+		err := h.service.Verify(urlParams)
+		if err != nil {
+			writeResponse(w, http.StatusOK, notAuthorizedResponse(err.Error()))
+		} else {
+			writeResponse(w, http.StatusOK, authorizedResponse())
+		}
+	} else {
+		writeResponse(w, http.StatusForbidden, notAuthorizedResponse("missing token"))
+	}
+}
+
+func writeResponse(w http.ResponseWriter, code int, data interface{}) {
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(code)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		panic(err)
+	}
+}
+
+func notAuthorizedResponse(msg string) map[string]interface{} {
+	return map[string]interface{}{
+		"isAuthorized": false,
+		"message":      msg,
+	}
+}
+
+func authorizedResponse() map[string]bool {
+	return map[string]bool{"isAuthorized": true}
 }
