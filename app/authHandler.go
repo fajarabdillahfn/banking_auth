@@ -2,9 +2,9 @@ package app
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
+	"github.com/fajarabdillahfn/banking-lib/logger"
 	"github.com/fajarabdillahfn/banking_auth/dto"
 	"github.com/fajarabdillahfn/banking_auth/service"
 )
@@ -16,7 +16,7 @@ type AuthHandler struct {
 func (h AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var loginRequest dto.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&loginRequest); err != nil {
-		log.Println("Error while decoding login request: " + err.Error())
+		logger.Error("Error while decoding login request: " + err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 	} else {
 		token, appErr := h.service.Login(loginRequest)
@@ -51,7 +51,7 @@ func (h AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 func (h AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var refreshRequest dto.RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&refreshRequest); err != nil {
-		log.Println("Error while decoding refresh token request: " + err.Error())
+		logger.Error("Error while decoding refresh token request: " + err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 	} else {
 		token, appErr := h.service.Refresh(refreshRequest)
