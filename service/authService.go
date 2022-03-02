@@ -13,6 +13,7 @@ import (
 type AuthService interface {
 	Login(dto.LoginRequest) (*dto.LoginResponse, error)
 	Verify(urlParams map[string]string) error
+	Refresh(request dto.RefreshTokenRequest) (*dto.LoginResponse, error)
 }
 
 func NewLoginService(repo domain.AuthRepository, permissions domain.RolePermissions) DefaultAuthService {
@@ -66,7 +67,7 @@ func (s DefaultAuthService) Verify(urlParams map[string]string) error {
 			}
 			isAuthorized := s.rolePermissions.IsAuthorizedFor(claims.Role, urlParams["routeName"])
 			if !isAuthorized {
-				return errors.New(fmt.Sprintf("%s role is not authorized", claims.Role))
+				return fmt.Errorf("%s role is not authorized", claims.Role)
 			}
 
 			return nil
@@ -75,6 +76,26 @@ func (s DefaultAuthService) Verify(urlParams map[string]string) error {
 			return errors.New("invalid token")
 		}
 	}
+}
+
+func (s DefaultAuthService) Refresh(request dto.RefreshTokenRequest) (*dto.LoginResponse, error) {
+	if vErr := request.IsAccessTokenValid(); vErr != nil {
+		if vErr.Errors == jwt.ValidationErrorExpired {
+			var err error
+			// continue with the refresh token functionality
+			if err := s.repo.RefreshTokenExists(request.RefreshToken); err != nil {
+				return nil, err
+			}
+			//generate an access token from refresh token
+			var accessToken string
+			if accessToken, err = domain.NewAccessTokenFromRefreshToken(request.RefreshToken); err != nil {
+				return nil, err
+			}
+			return &dto.LoginResponse{AccessToken: accessToken}, nil
+		}
+		return nil, errors.New("invalid token")
+	}
+	return nil, errors.New("cannot generate a new access token until the current one expires")
 }
 
 func jwtTokenFromString(tokenString string) (*jwt.Token, error) {

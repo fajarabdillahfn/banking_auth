@@ -2,7 +2,6 @@ package app
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -12,10 +11,6 @@ import (
 
 type AuthHandler struct {
 	service service.AuthService
-}
-
-func (h AuthHandler) NotImplementedHandle(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Handler not implemented...")
 }
 
 func (h AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +32,7 @@ func (h AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	urlParams := make(map[string]string)
 
 	// converting from query to map
-	for k, _ := range r.URL.Query() {
+	for k := range r.URL.Query() {
 		urlParams[k] = r.URL.Query().Get(k)
 	}
 
@@ -50,6 +45,21 @@ func (h AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		writeResponse(w, http.StatusForbidden, notAuthorizedResponse("missing token"))
+	}
+}
+
+func (h AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var refreshRequest dto.RefreshTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&refreshRequest); err != nil {
+		log.Println("Error while decoding refresh token request: " + err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+	} else {
+		token, err := h.service.Refresh(refreshRequest)
+		if err != nil {
+			writeResponse(w, http.StatusBadRequest, err.Error())
+		} else {
+			writeResponse(w, http.StatusOK, *token)
+		}
 	}
 }
 
